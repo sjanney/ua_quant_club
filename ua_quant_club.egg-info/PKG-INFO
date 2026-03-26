@@ -1,0 +1,20 @@
+Metadata-Version: 2.4
+Name: ua-quant-club
+Version: 0.1.0
+Summary: University of Arizona Quantitative Finance Club — alpha research and paper trading tooling
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: yfinance
+Requires-Dist: pyarrow
+Requires-Dist: playwright
+Requires-Dist: pandas
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: statsmodels
+Requires-Dist: matplotlib
+Requires-Dist: jinja2
+Requires-Dist: weasyprint
+Requires-Dist: pyyaml
+Requires-Dist: python-dotenv
+Provides-Extra: dev
+Requires-Dist: pytest; extra == "dev"

@@ -1,0 +1,1 @@
+"""Statistical pairs trading alpha."""

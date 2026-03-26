@@ -1,0 +1,15 @@
+yfinance
+pyarrow
+playwright
+pandas
+numpy
+scipy
+statsmodels
+matplotlib
+jinja2
+weasyprint
+pyyaml
+python-dotenv
+
+[dev]
+pytest

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>UA Quant Club — Performance Report</title>
+<style>
+body { font-family: Georgia, "Times New Roman", serif; margin: 2rem; color: #1a1a1a; background: #fafafa; }
+h1 { font-size: 1.6rem; border-bottom: 2px solid #1c5d99; padding-bottom: 0.4rem; }
+h2 { font-size: 1.15rem; margin-top: 2rem; color: #1c5d99; }
+table { border-collapse: collapse; width: 100%; margin: 1rem 0; background: #fff; }
+th, td { border: 1px solid #ccc; padding: 0.45rem 0.6rem; text-align: left; }
+th { background: #e8f0f8; }
+.metrics td:first-child { font-weight: 600; width: 14rem; }
+.footer { margin-top: 3rem; font-size: 0.85rem; color: #555; border-top: 1px solid #ccc; padding-top: 1rem; }
+img.equity { max-width: 100%; height: auto; border: 1px solid #ddd; }
+.strategy { margin-bottom: 1rem; padding: 0.5rem; background: #fff; border-left: 4px solid #1c5d99; }
+</style>
+</head>
+<body>
+<h1>UA Quantitative Finance Club — Strategy Report</h1>
+
+<h2>Portfolio summary</h2>
+<table>
+<tr><th>Total value</th><td>{{ "%.2f"|format(portfolio_summary["total_value"]|float) }}</td></tr>
+<tr><th>Cash</th><td>{{ "%.2f"|format(portfolio_summary["cash"]|float) }}</td></tr>
+<tr><th>Positions</th><td>{{ portfolio_summary["num_positions"] }}</td></tr>
+<tr><th>Total P&amp;L (est.)</th><td>{{ "%.2f"|format(portfolio_summary["total_pnl"]|float) }}</td></tr>
+</table>
+
+<h2>Performance metrics</h2>
+<table class="metrics">
+{% for k, v in metrics.items() %}
+<tr><td>{{ k }}</td><td>{{ v }}</td></tr>
+{% endfor %}
+</table>
+
+<h2>Equity curve</h2>
+<p><em>{{ equity_note }}</em></p>
+{% if equity_png_base64 %}
+<p><img class="equity" src="data:image/png;base64,{{ equity_png_base64 }}" alt="Equity curve"/></p>
+{% endif %}
+
+<h2>Last {{ trades_recent|length }} trades</h2>
+<table>
+<tr>
+{% for col in trade_columns %}<th>{{ col }}</th>{% endfor %}
+</tr>
+{% for row in trades_recent %}
+<tr>
+{% for col in trade_columns %}<td>{{ row.get(col, "") }}</td>{% endfor %}
+</tr>
+{% endfor %}
+</table>
+
+<h2>Per-strategy breakdown</h2>
+{% for s in strategy_rows %}
+<div class="strategy">
+<strong>{{ s.tag }}</strong> — trades: {{ s.n }} — net flow (est.): {{ "%.2f"|format(s.flow|float) }}
+</div>
+{% endfor %}
+
+<div class="footer">
+Generated at {{ generated_at }} — UA Quant Club — offline report (no external assets).
+</div>
+</body>
+</html>

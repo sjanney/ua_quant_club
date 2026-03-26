@@ -1,0 +1,46 @@
+universe:
+  banks: [JPM, BAC, GS, MS, WFC]
+  big_tech: [MSFT, AAPL, GOOGL, META, AMZN]
+  energy: [XOM, CVX, COP, SLB, EOG]
+  consumer: [KO, PEP, MCD, YUM, SBUX]
+  semis: [NVDA, AMD, INTC, QCOM, MU]
+
+backtest:
+  start_date: "2021-01-01"
+  end_date: "2023-12-31"
+  oos_start: "2024-01-01"
+  oos_end: "2024-12-31"
+  transaction_cost: 0.0005
+  notional_per_trade: 10000
+
+pairs_trading:
+  coint_p_threshold: 0.05
+  # Bonferroni: require p < 0.05 / (number of pair tests). Very strict; often yields no pairs.
+  use_bonferroni: false
+  # Drop pairs with slow mean-reversion (AR(1) half-life in days); null disables
+  max_half_life_days: 60
+  zscore_window: 30
+  entry_z: 2.0
+  exit_z: 0.5
+  stop_z: 3.0
+  # cross = enter when z crosses ±entry_z (recommended); level = legacy same-bar signal
+  entry_mode: cross
+  # Walk-forward hedge ratio: re-estimate OLS beta on past beta_lookback days every rebalance_every sessions
+  beta_lookback: 252
+  rebalance_every: 21
+
+execution:
+  dry_run: true
+  delay_min_s: 1.0
+  delay_max_s: 3.0
+  screenshot_on_failure: true
+
+logging:
+  log_dir: "logs"
+  db_path: "logs/trades.db"
+  max_bytes: 5000000
+  backup_count: 5
+
+reports:
+  output_dir: "reports/output"
+  include_pdf: false
