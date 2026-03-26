@@ -1,10 +1,15 @@
 # UA Quant Club (`ua-quant-club`)
 
-The University of Arizona Quantitative Finance Club builds and competes with systematic alphas; this repo supports research, paper trading on Investopedia’s Stock Simulator, and reporting for the intra-club alpha competition.
+Research-to-execution tooling for systematic alphas, including:
 
-## Repository structure
+- Pairs trading research (Engle-Granger cointegration, OLS hedge ratio, rolling z-scores)
+- Paper trading on Investopedia’s Stock Simulator (Playwright automation)
+- A SQLite trade journal with derived `signed_cash_flow`
+- HTML/PDF performance reports and portfolio metrics
 
-```
+## Repo Layout
+
+```text
 ua-quant-club/
 ├── alphas/
 │   ├── _template/
@@ -14,76 +19,87 @@ ua-quant-club/
 │       ├── strategy.py
 │       └── README.md
 ├── execution/
-│   ├── __init__.py
 │   ├── broker.py
 │   ├── orders.py
-│   └── portfolio.py
+│   ├── portfolio.py
+│   ├── sizing.py
+│   └── risk.py
 ├── data/
-│   ├── __init__.py
 │   ├── fetcher.py
 │   └── universe.py
 ├── logging_/
-│   ├── __init__.py
 │   ├── trade_logger.py
 │   ├── event_logger.py
 │   └── schema.sql
 ├── reports/
-│   ├── __init__.py
-│   ├── metrics.py
 │   ├── generator.py
+│   ├── metrics.py
 │   └── templates/
 │       └── report.html.j2
 ├── utils/
-│   ├── __init__.py
 │   ├── config.py
 │   └── notify.py
-├── tests/
-│   ├── test_metrics.py
-│   ├── test_orders.py
-│   └── test_fetcher.py
-├── config.yaml
-├── .env.example
-├── requirements.txt
-├── pyproject.toml
-└── README.md
+└── tests/
+    └── (pytest suite)
 ```
 
 ## Quickstart
 
 ```bash
-git clone <your-fork-url> ua-quant-club
-cd ua-quant-club
 python3 -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
+
 pip install -e . -r requirements.txt
-cp .env.example .env        # fill Investopedia + optional Discord webhook
-playwright install          # only if you use execution/broker.py live
+cp .env.example .env
+
+# Only needed if you use live broker automation
+playwright install
+
+# Run the pairs trading notebook
 jupyter notebook alphas/pairs_trading/notebook.ipynb
 ```
 
-WeasyPrint (optional PDF reports) may require extra system libraries on macOS or Linux; see the [WeasyPrint first steps](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html) documentation.
+WeasyPrint (optional PDF export) may require extra system libraries on macOS/Linux; see the [WeasyPrint first steps](https://doc.courtbouillon.org/weasyprint/stable/first_steps.html).
 
-## Add a new alpha
+## Desk Workflow (Research -> Paper Trade -> Report)
 
-1. Copy `alphas/_template/alpha_template.ipynb` to a new folder under `alphas/<your_alpha>/notebook.ipynb`.
-2. Keep the **10-cell** layout: hypothesis, imports + config, data (`data.fetcher` only), signals, backtest, metrics, plots, OOS, sensitivity, live execution plan.
-3. Put reusable logic in `alphas/<your_alpha>/strategy.py` and import it from the notebook.
+### 1) Research / Backtest
 
-## Execute a trade (Investopedia)
+Start with `alphas/pairs_trading/notebook.ipynb`. Strategy logic lives in `alphas/pairs_trading/strategy.py`, and reporting/backtest config comes from `config.yaml`.
 
-`execution.dry_run` defaults to `true` in `config.yaml`; set `execution.dry_run: false` only when you intend to hit the simulator.
+### 2) Paper Trade (Investopedia simulator)
+
+`execution.dry_run` defaults to `true` in `config.yaml`. Set it to `false` only when you are ready to submit orders to the simulator.
+
+Login is done via environment variables:
+
+- `INVESTOPEDIA_EMAIL`
+- `INVESTOPEDIA_PASSWORD`
+
+Example:
 
 ```python
 from execution import InvestopediaBroker
 from execution.orders import Order, OrderSide
 
-broker = InvestopediaBroker(headless=True)  # dry_run from config.yaml
-order = Order(ticker="JPM", side=OrderSide.BUY, quantity=10, strategy_tag="pairs_trading")
+broker = InvestopediaBroker(headless=True)  # reads execution.dry_run from config.yaml
 broker.login()
-filled = broker.place_order(order)
+
+order = Order(
+    ticker="JPM",
+    side=OrderSide.BUY,
+    quantity=10,
+    strategy_tag="pairs_trading",
+)
+
+broker.place_order(order)
 ```
 
-## Generate a report
+For pair trades, prefer using `execution.sizing.build_pair_leg_orders()` so live legs match your pair “position” conventions.
+
+### 3) Generate a report
+
+Reports use the trade journal (SQLite) plus broker portfolio totals to compute metrics from an equity-like curve derived from `signed_cash_flow`.
 
 ```python
 from execution.portfolio import Portfolio
@@ -91,23 +107,32 @@ from logging_.trade_logger import TradeLogger
 from reports.generator import ReportGenerator
 
 portfolio = Portfolio()
-portfolio.sync(broker)  # e.g. InvestopediaBroker from the snippet above
-path = ReportGenerator().generate(portfolio, TradeLogger(), export_pdf=False)
+portfolio.sync(broker)
+
+path = ReportGenerator().generate(
+    portfolio=portfolio,
+    trade_logger=TradeLogger(),
+    export_pdf=False,
+)
+print(path)
 ```
 
-## Team members
+## Logging / Journal
 
-| Name | Role | Contact |
-|------|------|---------|
-| _TBD_ | Captain | _@arizona.edu_ |
-| _TBD_ | Research | _@arizona.edu_ |
-| _TBD_ | Execution | _@arizona.edu_ |
+- Trade journal: `logging_.trade_logger.TradeLogger` writes to `config.yaml -> logging.db_path` (default `logs/trades.db`)
+- Operational events: `logs/events.log` (rotating)
+- The SQLite schema includes `signed_cash_flow` (computed from order side + fill price/quantity)
 
-## Competition context / scoring
+## Add a New Alpha
 
-Scoring rules and submission deadlines for the intra-club alpha competition are distributed by club leadership each semester. Replace this section with the official rubric (e.g. risk-adjusted return, robustness checks, presentation) when it is published.
-</think>
+1. Copy `alphas/_template/alpha_template.ipynb` to `alphas/<your_alpha>/notebook.ipynb`
+2. Keep the notebook layout used by this repo (signals, backtest, metrics, OOS, sensitivity, execution plan)
+3. Put reusable logic into `alphas/<your_alpha>/strategy.py` and import from the notebook
 
+## Tests
 
-<｜tool▁calls▁begin｜><｜tool▁call▁begin｜>
-StrReplace
+```bash
+pytest -q
+```
+
+All tests are designed to run without Playwright credentials (no live browser required).
